@@ -11,12 +11,16 @@ repository = "https://github.com/yazgoo/blockish"
 keywords = ["cli", "utf8", "terminal", "image"]
 categories = ["command-line-utilities"]
 
+[dependencies]
+image = "0.22"
 
 [dev-dependencies]
 euc = "0.4"
 vek = "0.9.9"
 tobj = "0.1"
 terminal_size = "0.1"
+glium = { git="https://github.com/glium/glium#d247ec25999c98cef5c2b3497ee78800cf586d96" }
+cgmath = "0.17"
 
 [profile.dev]
 # Optimize by default so we don't need to remember to always pass in --release
