@@ -10,6 +10,7 @@ homepage = "https://github.com/yazgoo/blockish"
 repository = "https://github.com/yazgoo/blockish"
 keywords = ["cli", "utf8", "terminal", "image"]
 categories = ["command-line-utilities"]
+exclude = ["images/*"]
 
 [dependencies]
 image = "0.22"
