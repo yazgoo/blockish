@@ -323,6 +323,7 @@ fn main() {
         let image: glium::texture::RawImage2d<u8> = display.read_front_buffer().unwrap();
         //let image = image::ImageBuffer::from_raw(image.width, image.height, image.data.into_owned()).unwrap();
         let raw_slice = &image.data[..];
+        println!("\x1b[{};0f", 0);
         render(image.width, image.height, &|x, y| {
             let start = (((image.height - 1 - y) * image.width + x)*4) as usize;
             (raw_slice[start], raw_slice[start + 1], raw_slice[start + 2])

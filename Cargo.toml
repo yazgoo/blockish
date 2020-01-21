@@ -21,6 +21,7 @@ tobj = "0.1"
 terminal_size = "0.1"
 glium = { git="https://github.com/glium/glium#d247ec25999c98cef5c2b3497ee78800cf586d96" }
 cgmath = "0.17"
+gif = "0.10"
 
 [profile.dev]
 # Optimize by default so we don't need to remember to always pass in --release

@@ -97,6 +97,7 @@ if let Some((Width(w), Height(h))) = size {
     let raw_slice = color.as_ref();
     let width = _w as u32;
     let height = _h as u32;
+    println!("\x1b[{};0f", 0);
     render(width, height as u32, &|x, y| {
         let start = (((height - 1 - y) * width + x)) as usize;
         let colors = raw_slice[start];

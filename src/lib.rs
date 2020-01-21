@@ -120,7 +120,6 @@ pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (
     let mut grey_scales_end: [usize; 32] = [0; 32];
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    handle.write_all(format!("\x1b[{};0f", 0).as_bytes()).unwrap();
     for y in 0..(height / 16) {
         let mut x = 0;
         while x < (width / 8) {
