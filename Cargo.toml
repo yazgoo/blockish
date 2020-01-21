@@ -1,0 +1,23 @@
+[package]
+name = "blockish"
+version = "0.0.1"
+authors = ["yazgoo <yazgoo@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "display images in a terminal with UTF8 blocks"
+readme = "README.md"
+homepage = "https://github.com/yazgoo/blockish"
+repository = "https://github.com/yazgoo/blockish"
+keywords = ["cli", "utf8", "terminal", "image"]
+categories = ["command-line-utilities"]
+
+
+[dev-dependencies]
+euc = "0.4"
+vek = "0.9.9"
+tobj = "0.1"
+terminal_size = "0.1"
+
+[profile.dev]
+# Optimize by default so we don't need to remember to always pass in --release
+opt-level = 3
