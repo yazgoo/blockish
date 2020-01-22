@@ -14,6 +14,7 @@ exclude = ["images/*"]
 
 [dependencies]
 image = "0.22"
+clap = { version = "2.33", features = ["yaml"] }
 
 [dev-dependencies]
 euc = "0.4"

@@ -1,0 +1,13 @@
+name: blockish
+about: display images in the terminal
+args:
+    - width:
+        short: w 
+        long: width
+        required: true
+        help: width of the image
+        takes_value: true
+    - INPUT:
+        help: The input file to use
+        required: true
+        index: 1

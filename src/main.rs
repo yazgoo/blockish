@@ -1,26 +1,18 @@
-extern crate image;
-
-use std::env;
-use image::GenericImageView;
-use image::imageops::FilterType;
-use blockish::render;
+#[macro_use]
+extern crate clap;
+use blockish::render_image;
+use clap::App;
 
 fn main() {
 
-    let args: Vec<String> = env::args().collect();
-    let img = image::open(&args[1]).unwrap();
-    let width = args[2].parse::<u32>().unwrap() * 8;
-    let height = img.height() * width / img.width();
-    let subimg  = img.resize(width, height, FilterType::Nearest);
-    let raw: Vec<u8> = subimg.to_rgb().into_raw();
-    let raw_slice = raw.as_slice();
-    let width = subimg.width();
-    let height = subimg.height();
+    let yaml = load_yaml!("cli.yml");
+    let matches = App::from(yaml).get_matches();
 
-    render(width, height, &|x, y| {
-        let start = ((y * width + x)*3) as usize;
-        (raw_slice[start], raw_slice[start + 1], raw_slice[start + 2])
-    });
+    let path = matches.value_of("INPUT").expect("no input given");
+    let width_str = matches.value_of("width").expect("no width given");
+    let width = width_str.parse::<u32>().unwrap() * 8;
+
+    render_image(path, width);
 }
 
 

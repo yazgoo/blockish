@@ -1,5 +1,9 @@
+extern crate image;
+
 use std::collections::HashMap;
 use std::io::{self, Write};
+use image::GenericImageView;
+use image::imageops::FilterType;
 
 #[inline(always)]
 fn bit_count(x: u32) -> usize {
@@ -180,4 +184,19 @@ pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (
         }
         handle.write_all(b"\x1b[0m\n").unwrap();
     }
+}
+
+pub fn render_image(path: &str, width: u32) {
+    let img = image::open(path).unwrap();
+    let height = img.height() * width / img.width();
+    let subimg  = img.resize(width, height, FilterType::Nearest);
+    let raw: Vec<u8> = subimg.to_rgb().into_raw();
+    let raw_slice = raw.as_slice();
+    let width = subimg.width();
+    let height = subimg.height();
+
+    render(width, height, &|x, y| {
+        let start = ((y * width + x)*3) as usize;
+        (raw_slice[start], raw_slice[start + 1], raw_slice[start + 2])
+    });
 }
