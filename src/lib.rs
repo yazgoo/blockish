@@ -56,6 +56,10 @@ fn grey_scale(rgba: &(u8, u8, u8)) -> usize {
 }
 
 pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8)) {
+    render_write_eol(width, height, coordinate_to_rgb, true)
+}
+
+pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8), write_eol: bool) {
     let mut transforms = HashMap::new();
     transforms.insert(u64::from_str_radix(&("0".repeat(8*3)+&"1".repeat(8)+&"0".repeat(8*4)).as_str(), 2).unwrap(), (true, "─"));
     transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, "─"));
@@ -182,7 +186,9 @@ pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (
            handle.write_all(format!("\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m{}", fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, result).as_bytes()).unwrap();
            x += 1;
         }
-        handle.write_all(b"\x1b[0m\n").unwrap();
+        if write_eol {
+            handle.write_all(b"\x1b[0m\n").unwrap();
+        }
     }
 }
 
