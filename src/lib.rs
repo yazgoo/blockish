@@ -55,6 +55,10 @@ fn grey_scale(rgba: &(u8, u8, u8)) -> usize {
     ((rgba.0 as usize + rgba.1 as usize + rgba.2 as usize) / 3)
 }
 
+pub fn current_terminal_is_supported() -> bool {
+    !cfg!(windows)
+}
+
 pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8)) {
     render_write_eol(width, height, coordinate_to_rgb, true)
 }
@@ -142,7 +146,8 @@ pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32,
                    let _y = y * 16 + (dy as u32) * 2;
                    let block = coordinate_to_rgb(_x, _y);
                    let grey = grey_scale(&block);
-                   /* do not write every pixel in sorted so that sort_by is faster
+                   /* do not write every pixel in sorted so that sort_by is faster,
+                    * instead only select pixels in the diagonal
                     * the downside is that this reduce quality a lot */
                    if i % AVERAGE_SIZE == dy { sorted[dy] = (grey, i, block) };
                    if i < 32 {
