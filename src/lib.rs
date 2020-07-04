@@ -1,5 +1,7 @@
 extern crate image;
+extern crate lazy_static;
 
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io::{self, Write};
 use image::GenericImageView;
@@ -35,25 +37,24 @@ fn bit_count(x: u32) -> usize {
     return res as usize;
 }
 
-fn find_closest_group(groups: &Vec<u64>, group: u64) -> u64 {
-    let mut min : u64 = 0;
+#[inline(always)]
+fn find_closest_group(groups: &[u64], group: u64) -> Option<usize> {
+    let mut min : Option<usize> = None;
     let mut min_distance = std::usize::MAX;
+    let mut i = 0;
     for template in groups {
         let xor = template ^ group;
         let distance = bit_count((xor >> 32) as u32) + bit_count((xor & 0xffffffff) as u32);
         if distance < min_distance {
             min_distance = distance;
-            min = *template;
+            min = Some(i);
         }
         if distance == 1 { return min }
+        i += 1
     }
     min
 }
 
-#[inline(always)]
-fn grey_scale(rgba: &(u8, u8, u8)) -> usize {
-    ((rgba.0 as usize + rgba.1 as usize + rgba.2 as usize) / 3)
-}
 
 pub fn current_terminal_is_supported() -> bool {
     !cfg!(windows)
@@ -63,69 +64,82 @@ pub fn render(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (
     render_write_eol(width, height, coordinate_to_rgb, true)
 }
 
+lazy_static! {
+    static ref TRANSFORMS: HashMap<u64, (bool, char)> = {
+        let mut transforms = HashMap::new();
+        transforms.insert(u64::from_str_radix(&("0".repeat(8*3)+&"1".repeat(8)+&"0".repeat(8*4)).as_str(), 2).unwrap(), (true, '─'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, '─'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(3)+&"1".repeat(8).repeat(2)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, '━'));
+        transforms.insert(u64::from_str_radix(&("00010000".repeat(8)).as_str(), 2).unwrap(), (true, '│'));
+        transforms.insert(u64::from_str_radix(&("00001000".repeat(8)).as_str(), 2).unwrap(), (true, '│'));
+        transforms.insert(u64::from_str_radix(&("00011000".repeat(8)).as_str(), 2).unwrap(), (true, '┃'));
+
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, '─'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, '─'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8).repeat(2)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, '━'));
+        transforms.insert(u64::from_str_radix(&("11101111".repeat(8)).as_str(), 2).unwrap(), (false, '│'));
+        transforms.insert(u64::from_str_radix(&("11110111".repeat(8)).as_str(), 2).unwrap(), (false, '│'));
+        transforms.insert(u64::from_str_radix(&("11100111".repeat(8)).as_str(), 2).unwrap(), (false, '┃'));
+
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▀'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(7)+&"1".repeat(8)).as_str(), 2).unwrap(), (true, '▁'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(6)+&"1".repeat(8).repeat(2)).as_str(), 2).unwrap(), (true, '▂'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(5)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, '▃'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▄'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(3)+&"1".repeat(8).repeat(5)).as_str(), 2).unwrap(), (true, '▅'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(2)+&"1".repeat(8).repeat(6)).as_str(), 2).unwrap(), (true, '▆'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(1)+&"1".repeat(8).repeat(7)).as_str(), 2).unwrap(), (true, '▇'));
+
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, '▀'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(7)+&"0".repeat(8)).as_str(), 2).unwrap(), (false, '▁'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(6)+&"0".repeat(8).repeat(2)).as_str(), 2).unwrap(), (false, '▂'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(5)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, '▃'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, '▄'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8).repeat(5)).as_str(), 2).unwrap(), (false, '▅'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(2)+&"0".repeat(8).repeat(6)).as_str(), 2).unwrap(), (false, '▆'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(1)+&"0".repeat(8).repeat(7)).as_str(), 2).unwrap(), (false, '▇'));
+
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(8)).as_str(), 2).unwrap(), (true, '█'));
+        transforms.insert(u64::from_str_radix(&("11111110".repeat(8)).as_str(), 2).unwrap(), (true, '▉'));
+        transforms.insert(u64::from_str_radix(&("11111100".repeat(8)).as_str(), 2).unwrap(), (true, '▊'));
+        transforms.insert(u64::from_str_radix(&("11111000".repeat(8)).as_str(), 2).unwrap(), (true, '▋'));
+        transforms.insert(u64::from_str_radix(&("11110000".repeat(8)).as_str(), 2).unwrap(), (true, '▌'));
+        transforms.insert(u64::from_str_radix(&("11100000".repeat(8)).as_str(), 2).unwrap(), (true, '▍'));
+        transforms.insert(u64::from_str_radix(&("11000000".repeat(8)).as_str(), 2).unwrap(), (true, '▎'));
+        transforms.insert(u64::from_str_radix(&("10000000".repeat(8)).as_str(), 2).unwrap(), (true, '▏'));
+        transforms.insert(u64::from_str_radix(&("00001111".repeat(8)).as_str(), 2).unwrap(), (true, '▐'));
+        transforms.insert(u64::from_str_radix(&(("1000100000100010").repeat(4)).as_str(), 2).unwrap(), (true, '░'));
+        transforms.insert(u64::from_str_radix(&(("1010101001010100").repeat(4)).as_str(), 2).unwrap(), (true, '▒'));
+        transforms.insert(u64::from_str_radix(&(("0111011111011101").repeat(4)).as_str(), 2).unwrap(), (true, '▓'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8)+&"0".repeat(8).repeat(7)).as_str(), 2).unwrap(), (true, '▔'));
+        transforms.insert(u64::from_str_radix(&("00000001".repeat(8)).as_str(), 2).unwrap(), (true, '▕'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, '▖'));
+        transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, '▗'));
+        transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▘'));
+        transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▙'));
+        transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, '▚'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, '▛'));
+        transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, '▜'));
+        transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▝'));
+        transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, '▞'));
+        transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, '▟'));
+        transforms
+    };
+}
+
 pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8), write_eol: bool) {
-    let mut transforms = HashMap::new();
-    transforms.insert(u64::from_str_radix(&("0".repeat(8*3)+&"1".repeat(8)+&"0".repeat(8*4)).as_str(), 2).unwrap(), (true, "─"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, "─"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(3)+&"1".repeat(8).repeat(2)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, "━"));
-    transforms.insert(u64::from_str_radix(&("00010000".repeat(8)).as_str(), 2).unwrap(), (true, "│"));
-    transforms.insert(u64::from_str_radix(&("00001000".repeat(8)).as_str(), 2).unwrap(), (true, "│"));
-    transforms.insert(u64::from_str_radix(&("00011000".repeat(8)).as_str(), 2).unwrap(), (true, "┃"));
-
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, "─"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, "─"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8).repeat(2)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, "━"));
-    transforms.insert(u64::from_str_radix(&("11101111".repeat(8)).as_str(), 2).unwrap(), (false, "│"));
-    transforms.insert(u64::from_str_radix(&("11110111".repeat(8)).as_str(), 2).unwrap(), (false, "│"));
-    transforms.insert(u64::from_str_radix(&("11100111".repeat(8)).as_str(), 2).unwrap(), (false, "┃"));
-
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▀"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(7)+&"1".repeat(8)).as_str(), 2).unwrap(), (true, "▁"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(6)+&"1".repeat(8).repeat(2)).as_str(), 2).unwrap(), (true, "▂"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(5)+&"1".repeat(8).repeat(3)).as_str(), 2).unwrap(), (true, "▃"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▄"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(3)+&"1".repeat(8).repeat(5)).as_str(), 2).unwrap(), (true, "▅"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(2)+&"1".repeat(8).repeat(6)).as_str(), 2).unwrap(), (true, "▆"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(1)+&"1".repeat(8).repeat(7)).as_str(), 2).unwrap(), (true, "▇"));
-
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, "▀"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(7)+&"0".repeat(8)).as_str(), 2).unwrap(), (false, "▁"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(6)+&"0".repeat(8).repeat(2)).as_str(), 2).unwrap(), (false, "▂"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(5)+&"0".repeat(8).repeat(3)).as_str(), 2).unwrap(), (false, "▃"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (false, "▄"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(3)+&"0".repeat(8).repeat(5)).as_str(), 2).unwrap(), (false, "▅"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(2)+&"0".repeat(8).repeat(6)).as_str(), 2).unwrap(), (false, "▆"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(1)+&"0".repeat(8).repeat(7)).as_str(), 2).unwrap(), (false, "▇"));
-
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(8)).as_str(), 2).unwrap(), (true, "█"));
-    transforms.insert(u64::from_str_radix(&("11111110".repeat(8)).as_str(), 2).unwrap(), (true, "▉"));
-    transforms.insert(u64::from_str_radix(&("11111100".repeat(8)).as_str(), 2).unwrap(), (true, "▊"));
-    transforms.insert(u64::from_str_radix(&("11111000".repeat(8)).as_str(), 2).unwrap(), (true, "▋"));
-    transforms.insert(u64::from_str_radix(&("11110000".repeat(8)).as_str(), 2).unwrap(), (true, "▌"));
-    transforms.insert(u64::from_str_radix(&("11100000".repeat(8)).as_str(), 2).unwrap(), (true, "▍"));
-    transforms.insert(u64::from_str_radix(&("11000000".repeat(8)).as_str(), 2).unwrap(), (true, "▎"));
-    transforms.insert(u64::from_str_radix(&("10000000".repeat(8)).as_str(), 2).unwrap(), (true, "▏"));
-    transforms.insert(u64::from_str_radix(&("00001111".repeat(8)).as_str(), 2).unwrap(), (true, "▐"));
-    transforms.insert(u64::from_str_radix(&(("1000100000100010").repeat(4)).as_str(), 2).unwrap(), (true, "░"));
-    transforms.insert(u64::from_str_radix(&(("1010101001010100").repeat(4)).as_str(), 2).unwrap(), (true, "▒"));
-    transforms.insert(u64::from_str_radix(&(("0111011111011101").repeat(4)).as_str(), 2).unwrap(), (true, "▓"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8)+&"0".repeat(8).repeat(7)).as_str(), 2).unwrap(), (true, "▔"));
-    transforms.insert(u64::from_str_radix(&("00000001".repeat(8)).as_str(), 2).unwrap(), (true, "▕"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, "▖"));
-    transforms.insert(u64::from_str_radix(&("0".repeat(8).repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, "▗"));
-    transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▘"));
-    transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▙"));
-    transforms.insert(u64::from_str_radix(&("11110000".repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, "▚"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, "▛"));
-    transforms.insert(u64::from_str_radix(&("1".repeat(8).repeat(4)+&"00001111".repeat(4)).as_str(), 2).unwrap(), (true, "▜"));
-    transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"0".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▝"));
-    transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"11110000".repeat(4)).as_str(), 2).unwrap(), (true, "▞"));
-    transforms.insert(u64::from_str_radix(&("00001111".repeat(4)+&"1".repeat(8).repeat(4)).as_str(), 2).unwrap(), (true, "▟"));
-
     let mut transforms_keys : Vec<u64> = Vec::new();
-    for k in transforms.keys() {
+    for k in TRANSFORMS.keys() {
         transforms_keys.push(*k);
     }
+    let transforms_keys = transforms_keys.as_slice();
+
+    let mut transforms_values : Vec<(bool, char)> = Vec::new();
+    for k in TRANSFORMS.values() {
+        transforms_values.push(*k);
+    }
+    let transforms_values = transforms_values.as_slice();
+
     const AVERAGE_SIZE: usize = 8;
     let mut sorted: [(usize, usize, (u8, u8, u8)); AVERAGE_SIZE] = [(0, 0, (0, 0, 0)); AVERAGE_SIZE];
     let mut grey_scales_start: [usize; 32] = [0; 32];
@@ -145,7 +159,8 @@ pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32,
                    let _x = x * 8 + (dx as u32);
                    let _y = y * 16 + (dy as u32) * 2;
                    let block = coordinate_to_rgb(_x, _y);
-                   let grey = grey_scale(&block);
+                   // greyscale
+                   let grey = block.0 as usize + block.1 as usize + block.2 as usize;
                    /* do not write every pixel in sorted so that sort_by is faster,
                     * instead only select pixels in the diagonal
                     * the downside is that this reduce quality a lot */
@@ -173,26 +188,25 @@ pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32,
            for grey in &grey_scales_end {
                group = group << 1 | (if grey >= &average_grey_scale { 1 } else { 0 });
            }
-           let transform = match transforms.get(&group) {
+           let transform = match TRANSFORMS.get(&group) {
                Some(t) => t,
                _ => {
-                   let closest = find_closest_group(&transforms_keys, group);
-                   match transforms.get(&closest) {
+                   match find_closest_group(&transforms_keys, group) {
                        Some(x) => {
-                           x
+                          &transforms_values[x] 
                        },
-                       _ => &(true, " ")
+                       _ => &(true, ' ')
                    }
                 }
-           }.clone();
+           };
            let fg = if transform.0 { average_max } else { average_min };
            let bg = if transform.0 { average_min } else { average_max };
            let result = transform.1;
-           handle.write_all(format!("\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m{}", fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, result).as_bytes()).unwrap();
+           write!(handle, "\x1b[38;2;{};{};{}m\x1b[48;2;{};{};{}m{}", fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, result).unwrap();
            x += 1;
         }
         if write_eol {
-            handle.write_all(b"\x1b[0m\n").unwrap();
+            write!(handle, "\x1b[0m\n").unwrap();
         }
     }
 }

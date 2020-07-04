@@ -1,6 +1,6 @@
 [package]
 name = "blockish"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["yazgoo <yazgoo@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -13,6 +13,7 @@ categories = ["command-line-utilities"]
 exclude = ["images/*"]
 
 [dependencies]
+lazy_static = "1.4"
 image = "0.22"
 clap = { version = "2.33", features = ["yaml"] }
 
