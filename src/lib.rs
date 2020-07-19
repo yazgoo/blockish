@@ -1,6 +1,7 @@
 extern crate image;
 extern crate lazy_static;
 extern crate scoped_threadpool;
+extern crate num_cpus;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -254,6 +255,26 @@ pub fn render_thread_pool(width: u32, height: u32, coordinate_to_rgb: &(dyn Fn(u
             }
         }
     })
+}
+
+pub struct ThreadedEngine {
+    width: u32,
+    height: u32,
+    pool: Pool,
+    output_buffers: Vec<Vec<u8>>,
+    write_eol: bool,
+}
+
+impl ThreadedEngine {
+    pub fn render(&mut self, coordinate_to_rgb: &(dyn Fn(u32, u32) -> (u8, u8, u8) + Sync + Send)) {
+        render_thread_pool(self.width, self.height, coordinate_to_rgb, self.write_eol, &mut self.pool, &mut self.output_buffers)
+    }
+    pub fn new(width: u32, height: u32, write_eol: bool) -> ThreadedEngine {
+    let num_threads = num_cpus::get() * 2;
+    let pool = scoped_threadpool::Pool::new(num_threads as u32);
+    let output_buffers = vec![vec![0; (width * height) as usize]; num_threads as usize];
+        ThreadedEngine { width: width, height: height, pool: pool, output_buffers: output_buffers, write_eol: write_eol }
+    }
 }
 
 pub fn render_image(path: &str, width: u32) {
