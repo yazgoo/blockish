@@ -1,5 +1,6 @@
 extern crate image;
 extern crate lazy_static;
+extern crate scoped_threadpool;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -8,8 +9,8 @@ use image::GenericImageView;
 use image::imageops::FilterType;
 
 use std::str;
-use threadpool::ThreadPool;
 use std::sync::mpsc::channel;
+use scoped_threadpool::Pool;
 
 #[inline(always)]
 fn bit_count(x: u32) -> usize {
@@ -220,43 +221,39 @@ pub fn render_write_eol(width: u32, height: u32, coordinate_to_rgb: &dyn Fn(u32,
     render_write_eol_with_write(width, coordinate_to_rgb, write_eol, 0, height, &mut stdout);
 }
 
-pub fn render_write_eol_buffer(width: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8), write_eol: bool, top: u32, bottom: u32, buffer: &mut [u8]) -> u64 {
+pub fn render_write_eol_relative_buffer(width: u32, coordinate_to_rgb: &dyn Fn(u32, u32) -> (u8, u8, u8), write_eol: bool, top: u32, bottom: u32, buffer: &mut [u8]) -> u64 {
     let mut handle = Cursor::new(buffer);
     render_write_eol_with_write(width, coordinate_to_rgb, write_eol, top, bottom, &mut handle);
     handle.position()
 }
 
-pub fn render_rgba32_thread_pool(term_width: u32, term_height: u32, original_width: u32, original_height: u32, pool: &ThreadPool, window_buffer: &Vec<u32>) {
-    let n = pool.max_count() as u32;
-    let (tx, rx) = channel();
-    for k in 0..n {
-        let i = k as u32;
-        {
-            let tx = tx.clone();
-            let wb = window_buffer.clone();
-            pool.execute(move || {
-                let mut vec = vec![0; (term_width * term_height) as usize];
-                let output_buffer: &mut[u8] = vec.as_mut_slice();
-                let pos = render_write_eol_buffer(term_width, &|x, y| { 
-                    let start = (y * original_height / term_height * original_width
-                        + (x * original_width / term_width)) as usize;
-                    let pixel = wb.as_slice()[start];
-                    ((pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8)
-                }, false, i * term_height / n, (i + 1) * term_height / n, output_buffer) as usize;
-                let _ = tx.send((i, pos, vec));
-            });
+pub fn render_thread_pool(width: u32, height: u32, coordinate_to_rgb: &(dyn Fn(u32, u32) -> (u8, u8, u8) + Sync + Send), write_eol: bool, pool: &mut Pool, output_buffers: &mut Vec<Vec<u8>>) {
+    let n = pool.thread_count();
+    let mut k = 0;
+    pool.scoped(|scope| {
+        let (tx, rx) = channel();
+        for output_buffer in output_buffers {
+            let i = k as u32;
+            {
+                let tx = tx.clone();
+                scope.execute(move || {
+                    let pos = render_write_eol_relative_buffer(width, coordinate_to_rgb, write_eol, i * height / n, (i + 1) * height / n, output_buffer.as_mut_slice()) as usize;
+                    let _ = tx.send((i, pos, output_buffer));
+                });
+            }
+            k += 1
         }
-    }
-    let mut result = Vec::new();
-    for _ in 0..n {
-        result.push(rx.recv().unwrap());
-    }
-    result.sort_by_key(|k| k.0);
-    for (_, pos, output_buffer) in result {
-        if let Ok(s) = str::from_utf8(&output_buffer[0..pos]) {
-            print!("{}", s);
+        let mut result = Vec::new();
+        for _ in 0..n {
+            result.push(rx.recv().unwrap());
         }
-    }
+        result.sort_by_key(|k| k.0);
+        for (_, pos, output_buffer) in result {
+            if let Ok(s) = str::from_utf8(&output_buffer[0..pos]) {
+                print!("{}", s);
+            }
+        }
+    })
 }
 
 pub fn render_image(path: &str, width: u32) {
