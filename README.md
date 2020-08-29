@@ -16,6 +16,10 @@ display images in a terminal with unicode blocks
 
 [![youtube video](https://img.youtube.com/vi/O2TPNWa0P5Q/0.jpg)](https://www.youtube.com/watch?v=O2TPNWa0P5Q)
 
+## raycasting (via [blockish-raycasting](https://github.com/yazgoo/blockish-raycasting))
+
+[![youtube video](https://img.youtube.com/vi/vsczbMTCoxs/0.jpg)](https://www.youtube.com/watch?v=vsczbMTCoxs)
+
 ## euc (software 3d rendering)
 
 ![](images/euc.gif)
