@@ -4,7 +4,7 @@ args:
     - width:
         short: w 
         long: width
-        required: true
+        required: false
         help: width of the image
         takes_value: true
     - INPUT:

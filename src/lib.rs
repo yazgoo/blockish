@@ -6,8 +6,9 @@ extern crate num_cpus;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io::{self, Write, Cursor};
-use image::GenericImageView;
+use image::{GenericImageView, DynamicImage};
 use image::imageops::FilterType;
+use image::ImageResult;
 
 use std::str;
 use std::sync::mpsc::channel;
@@ -277,8 +278,7 @@ impl ThreadedEngine {
     }
 }
 
-pub fn render_image(path: &str, width: u32) {
-    let img = image::open(path).unwrap();
+fn render_image_result(img: DynamicImage, width: u32) {
     let height = img.height() * width / img.width();
     let subimg  = img.resize(width, height, FilterType::Nearest);
     let raw: Vec<u8> = subimg.to_rgb().into_raw();
@@ -290,4 +290,20 @@ pub fn render_image(path: &str, width: u32) {
         let start = ((y * width + x)*3) as usize;
         (raw_slice[start], raw_slice[start + 1], raw_slice[start + 2])
     });
+}
+
+pub fn render_image(path: &str, width: u32) {
+    render_image_result(image::open(path).unwrap(), width);
+}
+
+pub fn render_image_fitting_terminal(path: &str) {
+    if let Some((tw, th)) = term_size::dimensions() {
+        let img = image::open(path).unwrap();
+        let terminal_width = (tw * 8) as u32;
+        let terminal_heigth = (th * 8 * 2) as u32;
+        let width = img.width() * terminal_heigth / img.height();
+        let width = if width > terminal_width { terminal_width } else { width };
+
+        render_image_result(img, width);
+    } 
 }
