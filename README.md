@@ -1,5 +1,7 @@
 # blockish
 
+[![Discord](https://img.shields.io/badge/discord--blue?logo=discord)](https://discord.gg/F684Y8rYwZ)
+
 display images in a terminal with unicode blocks
 
 # examples
