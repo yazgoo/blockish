@@ -1,6 +1,6 @@
 [package]
 name = "blockish"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["yazgoo <yazgoo@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -14,7 +14,7 @@ exclude = ["images/*"]
 
 [dependencies]
 lazy_static = "1.4"
-image = "0.22"
+image = "0.24"
 clap = { version = "2.33", features = ["yaml"] }
 scoped_threadpool = "0.1"
 num_cpus = "1"
