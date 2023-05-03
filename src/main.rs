@@ -1,18 +1,23 @@
-#[macro_use]
 extern crate clap;
 use blockish::{render_image, render_image_fitting_terminal};
-use clap::App;
+use clap::{arg, command, value_parser};
 
 fn main() {
+    let matches = command!() // requires `cargo` feature
+        .arg(arg!([input] "the input file to use"))
+        .arg(
+            arg!(
+                -w --width <WIDTH> "width of the image"
+            )
+            // We don't have syntax yet for optional options, so manually calling `required`
+            .required(false)
+            .value_parser(value_parser!(u32)),
+        )
+        .get_matches();
 
-    let yaml = load_yaml!("cli.yml");
-    let matches = App::from(yaml).get_matches();
-
-    let path = matches.value_of("INPUT").expect("no input given");
-    match matches.value_of("width") {
-        Some(width_str) => render_image(path, width_str.parse::<u32>().unwrap() * 8),
-        None => render_image_fitting_terminal(path)
+    let path = matches.get_one::<String>("input").expect("no input given");
+    match matches.get_one::<u32>("width") {
+        Some(width) => render_image(path, width * 8),
+        None => render_image_fitting_terminal(path),
     };
 }
-
-
