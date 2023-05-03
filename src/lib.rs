@@ -4,7 +4,7 @@ extern crate num_cpus;
 extern crate scoped_threadpool;
 
 use image::imageops::FilterType;
-use image::{DynamicImage, GenericImageView};
+use image::DynamicImage;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io::{self, Cursor, Write};
@@ -642,7 +642,7 @@ impl ThreadedEngine {
 fn render_image_result(img: DynamicImage, width: u32) {
     let height = img.height() * width / img.width();
     let subimg = img.resize(width, height, FilterType::Nearest);
-    let raw: Vec<u8> = subimg.to_rgba().into_raw();
+    let raw: Vec<u8> = subimg.to_rgba8().into_raw();
     let raw_slice = raw.as_slice();
     let width = subimg.width();
     let height = subimg.height();
