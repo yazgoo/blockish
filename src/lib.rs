@@ -406,10 +406,11 @@ lazy_static! {
     };
 }
 
-pub fn render_write_eol_with_write(
+pub fn render_write_eol_with_write_with_restart_start_of_line(
     width: u32,
     coordinate_to_rgba: &dyn Fn(u32, u32) -> (u8, u8, u8, u8),
     write_eol: bool,
+    restart_start_of_line: bool,
     top: u32,
     bottom: u32,
     handle: &mut dyn Write,
@@ -525,9 +526,31 @@ pub fn render_write_eol_with_write(
         if write_eol {
             write!(handle, "\x1b[0m\n").unwrap();
         }
+        if restart_start_of_line {
+            write!(handle, "\x1b[0G").unwrap();
+        }
     }
     handle.write(&[0]).unwrap();
     let _ = handle.flush();
+}
+
+pub fn render_write_eol_with_write(
+    width: u32,
+    coordinate_to_rgba: &dyn Fn(u32, u32) -> (u8, u8, u8, u8),
+    write_eol: bool,
+    top: u32,
+    bottom: u32,
+    handle: &mut dyn Write,
+) {
+    render_write_eol_with_write_with_restart_start_of_line(
+        width,
+        coordinate_to_rgba,
+        write_eol,
+        true,
+        top,
+        bottom,
+        handle,
+    );
 }
 
 pub fn render_write_eol(
