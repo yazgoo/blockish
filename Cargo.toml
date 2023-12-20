@@ -1,6 +1,6 @@
 [package]
 name = "blockish"
-version = "0.1.3"
+version = "1.0.0"
 authors = ["yazgoo <yazgoo@gmail.com>"]
 edition = "2018"
 license = "MIT"

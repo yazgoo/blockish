@@ -67,8 +67,13 @@ pub fn current_terminal_is_supported() -> bool {
     !cfg!(windows)
 }
 
-pub fn render(width: u32, height: u32, coordinate_to_rgba: &dyn Fn(u32, u32) -> (u8, u8, u8, u8)) {
-    render_write_eol(width, height, coordinate_to_rgba, true)
+pub fn render(
+    width: u32,
+    height: u32,
+    coordinate_to_rgba: &dyn Fn(u32, u32) -> (u8, u8, u8, u8),
+    pos: Option<(u32, u32)>,
+) {
+    render_write_eol(width, height, coordinate_to_rgba, true, pos)
 }
 
 lazy_static! {
@@ -414,6 +419,7 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
     top: u32,
     bottom: u32,
     handle: &mut dyn Write,
+    pos: Option<(u32, u32)>,
 ) {
     let mut transforms_keys: Vec<u64> = Vec::new();
     let mut transforms_keys_without_reverse: Vec<u64> = Vec::new();
@@ -442,6 +448,7 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
         [(0, 0, (0, 0, 0, 0)); AVERAGE_SIZE];
     let mut grey_scales_start: [usize; 32] = [0; 32];
     let mut grey_scales_end: [usize; 32] = [0; 32];
+    let mut line = 0;
     for y in (top / 16)..(bottom / 16) {
         let mut x = 0;
         while x < (width / 8) {
@@ -529,6 +536,13 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
         if restart_start_of_line {
             write!(handle, "\x1b[0G").unwrap();
         }
+        match pos {
+            Some((x, y)) => {
+                write!(handle, "\x1b[{};{}H", y + line, x).unwrap();
+                line += 1;
+            }
+            _ => {}
+        }
     }
     handle.write(&[0]).unwrap();
     let _ = handle.flush();
@@ -541,6 +555,7 @@ pub fn render_write_eol_with_write(
     top: u32,
     bottom: u32,
     handle: &mut dyn Write,
+    pos: Option<(u32, u32)>,
 ) {
     render_write_eol_with_write_with_restart_start_of_line(
         width,
@@ -550,6 +565,7 @@ pub fn render_write_eol_with_write(
         top,
         bottom,
         handle,
+        pos,
     );
 }
 
@@ -558,9 +574,18 @@ pub fn render_write_eol(
     height: u32,
     coordinate_to_rgba: &dyn Fn(u32, u32) -> (u8, u8, u8, u8),
     write_eol: bool,
+    pos: Option<(u32, u32)>,
 ) {
     let mut stdout = io::stdout();
-    render_write_eol_with_write(width, coordinate_to_rgba, write_eol, 0, height, &mut stdout);
+    render_write_eol_with_write(
+        width,
+        coordinate_to_rgba,
+        write_eol,
+        0,
+        height,
+        &mut stdout,
+        pos,
+    );
 }
 
 pub fn render_write_eol_relative_buffer(
@@ -579,6 +604,7 @@ pub fn render_write_eol_relative_buffer(
         top,
         bottom,
         &mut handle,
+        None,
     );
     handle.position()
 }
@@ -662,7 +688,7 @@ impl ThreadedEngine {
     }
 }
 
-fn render_image_result(img: DynamicImage, width: u32) {
+fn render_image_result(img: DynamicImage, width: u32, pos: Option<(u32, u32)>) {
     let height = img.height() * width / img.width();
     let subimg = img.resize(width, height, FilterType::Nearest);
     let raw: Vec<u8> = subimg.to_rgba8().into_raw();
@@ -670,19 +696,24 @@ fn render_image_result(img: DynamicImage, width: u32) {
     let width = subimg.width();
     let height = subimg.height();
 
-    render(width, height, &|x, y| {
-        let start = ((y * width + x) * 4) as usize;
-        (
-            raw_slice[start],
-            raw_slice[start + 1],
-            raw_slice[start + 2],
-            raw_slice[start + 3],
-        )
-    });
+    render(
+        width,
+        height,
+        &|x, y| {
+            let start = ((y * width + x) * 4) as usize;
+            (
+                raw_slice[start],
+                raw_slice[start + 1],
+                raw_slice[start + 2],
+                raw_slice[start + 3],
+            )
+        },
+        pos,
+    );
 }
 
-pub fn render_image(path: &str, width: u32) {
-    render_image_result(image::open(path).unwrap(), width);
+pub fn render_image(path: &str, width: u32, pos: Option<(u32, u32)>) {
+    render_image_result(image::open(path).unwrap(), width, pos);
 }
 
 pub fn render_image_fitting_terminal(path: &str) {
@@ -697,6 +728,6 @@ pub fn render_image_fitting_terminal(path: &str) {
             width
         };
 
-        render_image_result(img, width);
+        render_image_result(img, width, None);
     }
 }

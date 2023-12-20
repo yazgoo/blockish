@@ -17,7 +17,7 @@ fn main() {
 
     let path = matches.get_one::<String>("input").expect("no input given");
     match matches.get_one::<u32>("width") {
-        Some(width) => render_image(path, width * 8),
+        Some(width) => render_image(path, width * 8, None),
         None => render_image_fitting_terminal(path),
     };
 }
