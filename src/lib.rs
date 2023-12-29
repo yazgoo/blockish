@@ -450,6 +450,16 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
     let mut grey_scales_end: [usize; 32] = [0; 32];
     let mut line = 0;
     for y in (top / 16)..(bottom / 16) {
+        if restart_start_of_line {
+            write!(handle, "\x1b[0G").unwrap();
+        }
+        match pos {
+            Some((x, y)) => {
+                write!(handle, "\x1b[{};{}H", y + line, x).unwrap();
+                line += 1;
+            }
+            _ => {}
+        }
         let mut x = 0;
         while x < (width / 8) {
             let mut sum_grey_scale: usize = 0;
@@ -532,16 +542,6 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
         }
         if write_eol {
             write!(handle, "\x1b[0m\n").unwrap();
-        }
-        if restart_start_of_line {
-            write!(handle, "\x1b[0G").unwrap();
-        }
-        match pos {
-            Some((x, y)) => {
-                write!(handle, "\x1b[{};{}H", y + line, x).unwrap();
-                line += 1;
-            }
-            _ => {}
         }
     }
     handle.write(&[0]).unwrap();
