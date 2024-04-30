@@ -450,12 +450,13 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
     let mut grey_scales_end: [usize; 32] = [0; 32];
     let mut line = 0;
     for y in (top / 16)..(bottom / 16) {
+        let mut line_str = String::new();
         if restart_start_of_line {
-            write!(handle, "\x1b[0G").unwrap();
+            line_str.push_str("\x1b[0G");
         }
         match pos {
             Some((x, y)) => {
-                write!(handle, "\x1b[{};{}H", y + line, x).unwrap();
+                line_str.push_str(format!("\x1b[{};{}H", y + line, x).as_str());
                 line += 1;
             }
             _ => {}
@@ -530,19 +531,20 @@ pub fn render_write_eol_with_write_with_restart_start_of_line(
             };
             let result = transform.1;
             if fg.3 != 0 {
-                write!(handle, "\x1b[38;2;{};{};{}m", fg.0, fg.1, fg.2,).unwrap();
+                line_str.push_str(format!("\x1b[38;2;{};{};{}m", fg.0, fg.1, fg.2).as_str());
             } else {
-                write!(handle, "\x1b[0m").unwrap()
+                line_str.push_str("\x1b[0m");
             }
             if bg.3 != 0 {
-                write!(handle, "\x1b[48;2;{};{};{}m", bg.0, bg.1, bg.2).unwrap();
+                line_str.push_str(format!("\x1b[48;2;{};{};{}m", bg.0, bg.1, bg.2).as_str());
             }
-            write!(handle, "{}", if fg.3 == 0 { ' ' } else { result }).unwrap();
+            line_str.push_str(format!("{}", if fg.3 == 0 { ' ' } else { result }).as_str());
             x += 1;
         }
         if write_eol {
-            write!(handle, "\x1b[0m\n").unwrap();
+            line_str.push_str("\x1b[0m\n");
         }
+        write!(handle, "{}", line_str).unwrap();
     }
     handle.write(&[0]).unwrap();
     let _ = handle.flush();
